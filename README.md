@@ -300,8 +300,6 @@ varuna/
 
 Built by **ai-nan** for the [Colosseum Solana Agent Hackathon](https://www.colosseum.org/) (Feb 2026).
 
-*Varuna: named after the Hindu deity of cosmic order and protection.*
-
 ## License
 
 MIT
