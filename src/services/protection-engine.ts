@@ -36,7 +36,7 @@ const DEFAULT_CONFIG: ProtectionEngineConfig = {
   targetHealthFactor: 1.5,
   maxProtectionUsd: 10000,
   dryRun: true,
-  preferredStrategy: 'yield-optimized',
+  preferredStrategy: 'balanced', // totalScoreUsd = capital + yield impact
   yieldRates: DEFAULT_YIELD_RATES,
 };
 
@@ -487,18 +487,20 @@ export class ProtectionEngine {
   private rankOptions(options: ProtectionOption[]): ProtectionOption[] {
     switch (this.config.preferredStrategy) {
       case 'yield-optimized':
-        // Minimize yield loss (annualized yield cost)
+        // Minimize yield loss only (ignores capital cost)
         return options.sort((a, b) => a.yieldCostAnnualUsd - b.yieldCostAnnualUsd);
 
       case 'cost-optimized':
-        // Minimize immediate capital outlay
+        // Minimize immediate capital outlay only (ignores yield impact)
         return options.sort((a, b) => a.capitalCostUsd - b.capitalCostUsd);
 
       case 'speed-optimized':
         // Maximize resulting HF (get to safety fastest)
         return options.sort((a, b) => b.resultingHF - a.resultingHF);
 
+      case 'balanced':
       default:
+        // Minimize total cost (capital + annualized yield impact)
         return options.sort((a, b) => a.totalScoreUsd - b.totalScoreUsd);
     }
   }

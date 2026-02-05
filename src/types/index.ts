@@ -153,7 +153,7 @@ export interface ProtectionEngineConfig {
   targetHealthFactor: number;       // HF to restore to (default 1.5)
   maxProtectionUsd: number;         // Max USD to spend per protection event
   dryRun: boolean;                  // Simulate only, don't send tx
-  preferredStrategy: 'yield-optimized' | 'cost-optimized' | 'speed-optimized';
+  preferredStrategy: 'balanced' | 'yield-optimized' | 'cost-optimized' | 'speed-optimized';
   // Yield assumptions for protocols (APY for supply/borrow)
   yieldRates: Record<string, { supplyAPY: number; borrowAPY: number }>;
 }

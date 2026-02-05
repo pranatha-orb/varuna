@@ -35,6 +35,176 @@ const demoState = new DemoStateManager();
 const app = express();
 app.use(express.json());
 
+// ─── Landing Page ──────────────────────────────────────────────
+
+app.get('/', (req, res) => {
+  const position = demoState.getPosition();
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Varuna Demo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+      background: #0a0a0a;
+      color: #e0e0e0;
+      min-height: 100vh;
+      padding: 40px;
+    }
+    .container { max-width: 900px; margin: 0 auto; }
+    h1 {
+      font-size: 2.5rem;
+      background: linear-gradient(135deg, #00d4aa, #0099ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 8px;
+    }
+    .tagline { color: #888; margin-bottom: 40px; font-size: 1.1rem; }
+    .status-card {
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .status-title { font-size: 1.2rem; color: #fff; }
+    .badge {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .badge-demo { background: #1a3a2a; color: #00d4aa; }
+    .badge-danger { background: #3a1a1a; color: #ff4444; }
+    .badge-warning { background: #3a3a1a; color: #ffaa00; }
+    .badge-healthy { background: #1a3a2a; color: #00d4aa; }
+    .metric { margin-bottom: 12px; }
+    .metric-label { color: #666; font-size: 0.85rem; }
+    .metric-value { font-size: 1.5rem; color: #fff; }
+    .endpoints { margin-top: 32px; }
+    .endpoint {
+      background: #0d0d0d;
+      border: 1px solid #1a1a1a;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .method {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .method-get { background: #1a2a3a; color: #4499ff; }
+    .method-post { background: #2a3a1a; color: #88cc44; }
+    .path { color: #ccc; }
+    .desc { color: #666; margin-left: auto; font-size: 0.85rem; }
+    a { color: #00d4aa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .footer { margin-top: 40px; color: #444; font-size: 0.85rem; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>VARUNA</h1>
+    <p class="tagline">Risk Layer for DeFi Agents</p>
+
+    <div class="status-card">
+      <div class="status-header">
+        <span class="status-title">Demo Status</span>
+        <span class="badge badge-demo">DEMO MODE</span>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Health Factor</div>
+        <div class="metric-value">${position.healthFactor.toFixed(3)}
+          <span class="badge ${position.healthFactor < 1.2 ? 'badge-danger' : position.healthFactor < 1.5 ? 'badge-warning' : 'badge-healthy'}">
+            ${position.healthFactor < 1.2 ? 'DANGER' : position.healthFactor < 1.5 ? 'WARNING' : 'HEALTHY'}
+          </span>
+        </div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Demo Wallet</div>
+        <div class="metric-value" style="font-size: 0.9rem;">${DEMO_WALLET}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Protected</div>
+        <div class="metric-value">${demoState.isProtected() ? 'Yes' : 'No'}</div>
+      </div>
+    </div>
+
+    <div class="endpoints">
+      <h3 style="margin-bottom: 16px; color: #888;">API Endpoints</h3>
+
+      <a href="/api/status" class="endpoint">
+        <span class="method method-get">GET</span>
+        <span class="path">/api/status</span>
+        <span class="desc">Service status</span>
+      </a>
+
+      <a href="/api/risk/${DEMO_WALLET}" class="endpoint">
+        <span class="method method-get">GET</span>
+        <span class="path">/api/risk/:wallet</span>
+        <span class="desc">5-factor risk assessment</span>
+      </a>
+
+      <a href="/api/protect/${DEMO_WALLET}/kamino" class="endpoint">
+        <span class="method method-get">GET</span>
+        <span class="path">/api/protect/:wallet/:protocol</span>
+        <span class="desc">Protection options</span>
+      </a>
+
+      <a href="/api/collateral/${DEMO_WALLET}" class="endpoint">
+        <span class="method method-get">GET</span>
+        <span class="path">/api/collateral/:wallet</span>
+        <span class="desc">Yield optimization</span>
+      </a>
+
+      <a href="/api/liquidations/stats" class="endpoint">
+        <span class="method method-get">GET</span>
+        <span class="path">/api/liquidations/stats</span>
+        <span class="desc">Liquidation statistics</span>
+      </a>
+
+      <a href="/api/positions/${DEMO_WALLET}" class="endpoint">
+        <span class="method method-get">GET</span>
+        <span class="path">/api/positions/:wallet</span>
+        <span class="desc">All lending positions</span>
+      </a>
+
+      <div class="endpoint">
+        <span class="method method-post">POST</span>
+        <span class="path">/api/demo/reset</span>
+        <span class="desc">Reset demo scenario</span>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>WebSocket: ws://localhost:${PORT}/ws</p>
+      <p style="margin-top: 8px;">Built for <a href="https://www.colosseum.org/">Colosseum Solana Agent Hackathon</a></p>
+    </div>
+  </div>
+
+  <script>
+    // Auto-refresh every 5 seconds to show health dropping
+    setTimeout(() => location.reload(), 5000);
+  </script>
+</body>
+</html>
+  `;
+  res.send(html);
+});
+
 // ASCII banner
 const banner = `
 ╔═══════════════════════════════════════════════════════════╗
