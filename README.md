@@ -1,6 +1,6 @@
-# Varuna
+# Varuna: Risk Layer for DeFi Agents
 
-**The DeFi Risk Engine That Makes Solana Agents Earn More and Never Get Liquidated**
+**The AI Risk Engine That Makes DeFi Agents Earn More and Never Get Liquidated**
 
 DeFi agents lose millions to liquidation every month. They borrow against collateral, the market dips while they sleep, and liquidator bots seize their assets at a discount. Worse — their collateral earns base yield when it could earn 70% more, and every "protection" tool just dumps collateral without considering the yield impact.
 
