@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth bg-[#020202]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VARUNA | Risk Layer for DeFi Agents</title>
+  <meta name="description" content="The AI Risk Engine That Makes DeFi Agents Earn More and Never Get Liquidated. Autonomous DeFi risk infrastructure for Solana.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Iconify -->
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: {
+              main: '#020202',
+              surface: '#080808',
+              hover: '#0D0D0D'
+            },
+            line: {
+              subtle: 'rgba(255, 255, 255, 0.06)',
+              strong: 'rgba(255, 255, 255, 0.15)',
+            },
+            text: {
+              primary: '#EDEDED',
+              secondary: '#666666',
+              tertiary: '#333333'
+            },
+            brand: {
+              DEFAULT: '#00FF94',
+              dim: 'rgba(0, 255, 148, 0.1)',
+              accent: '#38bdf8'
+            },
+            danger: '#ef4444',
+            warning: '#eab308',
+            safe: '#22c55e'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          animation: {
+            'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'scan': 'scan 4s linear infinite',
+            'ticker': 'ticker 40s linear infinite',
+            'float': 'float 6s ease-in-out infinite',
+          },
+          keyframes: {
+            scan: {
+              '0%': { transform: 'translateY(-100%)' },
+              '100%': { transform: 'translateY(100%)' }
+            },
+            ticker: {
+              '0%': { transform: 'translateX(0)' },
+              '100%': { transform: 'translateX(-50%)' }
+            },
+            float: {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-10px)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #020202;
+      color: #EDEDED;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .noise {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    .glass {
+      background: rgba(8, 8, 8, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .glass-high {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .tech-card {
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .tech-card:hover {
+      border-color: rgba(255, 255, 255, 0.3);
+      background: rgba(255, 255, 255, 0.03);
+      transform: translateY(-2px);
+    }
+
+    .tech-card:hover .card-icon {
+      color: #00FF94;
+      transform: scale(1.1);
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #020202; }
+    ::-webkit-scrollbar-thumb { background: #333; }
+    ::-webkit-scrollbar-thumb:hover { background: #00FF94; }
+
+    .grid-bg {
+      background-size: 40px 40px;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    }
+  </style>
+</head>
+
+<body class="selection:bg-brand selection:text-black font-sans relative">
+  <div class="noise"></div>
+
+  <!-- Decorative Lines -->
+  <div class="fixed top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent z-50"></div>
+  <div class="fixed bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent z-50"></div>
+  <div class="fixed top-0 left-6 w-[1px] h-screen bg-white/5 hidden xl:block z-40"></div>
+  <div class="fixed top-0 right-6 w-[1px] h-screen bg-white/5 hidden xl:block z-40"></div>
+
+  <!-- Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center bg-bg-main/80 backdrop-blur-md border-b border-line-subtle">
+    <div class="flex items-center gap-2">
+      <div class="w-3 h-3 bg-brand rounded-sm animate-pulse-fast"></div>
+      <span class="font-mono font-bold tracking-tighter text-xl">VARUNA_</span>
+    </div>
+
+    <div class="hidden md:flex items-center gap-8 bg-white/5 px-6 py-2 rounded-full border border-line-subtle">
+      <a href="#features" class="font-mono text-[10px] text-text-secondary hover:text-white transition-colors uppercase tracking-widest">Features</a>
+      <a href="#how-it-works" class="font-mono text-[10px] text-text-secondary hover:text-white transition-colors uppercase tracking-widest">Architecture</a>
+      <a href="#sdk" class="font-mono text-[10px] text-text-secondary hover:text-white transition-colors uppercase tracking-widest">SDK</a>
+      <a href="#pricing" class="font-mono text-[10px] text-text-secondary hover:text-white transition-colors uppercase tracking-widest">Pricing</a>
+      <a href="#judges" class="font-mono text-[10px] text-brand hover:text-white transition-colors uppercase tracking-widest">Judges</a>
+    </div>
+
+    <div class="flex items-center gap-4">
+      <div class="hidden md:flex flex-col items-end mr-4">
+        <span class="font-mono text-[9px] text-text-secondary">PROTECTION STATUS</span>
+        <span class="font-mono text-[9px] text-brand">ACTIVE</span>
+      </div>
+      <a href="demo.html" class="bg-white text-black font-mono font-bold text-xs px-5 py-2 hover:bg-brand transition-colors flex items-center gap-2 group">
+        DASHBOARD
+        <iconify-icon icon="solar:arrow-right-linear" class="group-hover:translate-x-1 transition-transform"></iconify-icon>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="relative min-h-screen pt-32 pb-20 px-6 overflow-hidden flex flex-col justify-center grid-bg">
+    <!-- Background Glow -->
+    <div class="absolute top-[20%] right-[10%] w-[600px] h-[600px] bg-brand/5 rounded-full blur-[120px] pointer-events-none animate-pulse-fast"></div>
+
+    <div class="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-12 items-center relative z-10">
+
+      <!-- Left: Typography -->
+      <div class="lg:col-span-7 flex flex-col gap-8">
+        <div class="inline-flex items-center gap-2 border border-brand/20 bg-brand/5 px-3 py-1 w-fit rounded text-brand font-mono text-[10px] uppercase tracking-wider">
+          <span class="w-1.5 h-1.5 bg-brand rounded-full animate-pulse"></span>
+          Solana Agent Hackathon 2026
+        </div>
+
+        <h1 class="text-5xl md:text-7xl lg:text-8xl font-light tracking-tighter text-white leading-[0.9]">
+          RISK LAYER<br>
+          <span class="font-bold text-transparent bg-clip-text bg-gradient-to-r from-brand via-brand to-brand/40">FOR DEFI AGENTS</span>
+        </h1>
+
+        <p class="font-mono text-sm md:text-base text-text-secondary max-w-xl leading-relaxed border-l border-brand/30 pl-6">
+          The AI Risk Engine That Makes DeFi Agents<br>
+          <span class="text-white">Earn More</span> and <span class="text-brand">Never Get Liquidated.</span>
+        </p>
+
+        <!-- Command Line Input -->
+        <div class="mt-8 w-full max-w-md group relative">
+          <div class="absolute -inset-0.5 bg-gradient-to-r from-brand to-brand/0 rounded opacity-30 group-hover:opacity-70 transition duration-500 blur"></div>
+          <div class="relative flex items-center bg-black border border-line-strong p-1 rounded">
+            <span class="pl-4 pr-2 font-mono text-brand text-sm">$</span>
+            <input type="text" value="npm install varuna" class="bg-transparent border-none text-white font-mono text-sm w-full focus:ring-0 h-10" readonly>
+            <button onclick="navigator.clipboard.writeText('npm install varuna')" class="bg-white/10 hover:bg-white/20 text-white font-mono text-xs px-4 py-2 rounded transition-colors h-10">
+              COPY
+            </button>
+          </div>
+        </div>
+
+        <!-- CTAs -->
+        <div class="flex gap-4 mt-4">
+          <a href="#get-started" class="bg-white hover:bg-brand text-black font-mono text-xs px-8 py-4 uppercase tracking-wide transition-all duration-300 flex items-center gap-2">
+            Start Protection
+            <iconify-icon icon="solar:shield-check-bold"></iconify-icon>
+          </a>
+          <a href="demo.html" class="bg-transparent border border-white/20 hover:border-brand text-white font-mono text-xs px-8 py-4 uppercase tracking-wide transition-all duration-300 flex items-center gap-2">
+            <iconify-icon icon="solar:play-circle-linear"></iconify-icon>
+            Live Demo
+          </a>
+        </div>
+      </div>
+
+      <!-- Right: Terminal Panel -->
+      <div class="lg:col-span-5 relative h-[500px] flex items-center justify-center">
+        <div class="absolute w-full aspect-square max-w-md bg-[#050505] border border-line-strong rounded-xl shadow-2xl overflow-hidden group">
+          <!-- Header -->
+          <div class="h-10 border-b border-line-subtle bg-white/5 flex items-center justify-between px-4">
+            <div class="flex gap-2">
+              <div class="w-2 h-2 rounded-full bg-red-500/50"></div>
+              <div class="w-2 h-2 rounded-full bg-yellow-500/50"></div>
+              <div class="w-2 h-2 rounded-full bg-green-500/50"></div>
+            </div>
+            <div class="font-mono text-[10px] text-text-secondary">varuna-guardian.ts</div>
+          </div>
+
+          <!-- Content -->
+          <div class="p-6 font-mono text-xs relative">
+            <!-- Scanline -->
+            <div class="absolute top-0 left-0 w-full h-[2px] bg-brand/50 shadow-[0_0_20px_#00FF94] animate-scan opacity-50 pointer-events-none z-10"></div>
+
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              <div class="bg-white/5 p-3 rounded border border-line-subtle">
+                <div class="text-text-secondary text-[10px] mb-1">HEALTH FACTOR</div>
+                <div class="text-brand text-lg">1.85</div>
+              </div>
+              <div class="bg-white/5 p-3 rounded border border-line-subtle">
+                <div class="text-text-secondary text-[10px] mb-1">RISK LEVEL</div>
+                <div class="text-safe text-lg">SAFE</div>
+              </div>
+            </div>
+
+            <!-- Code -->
+            <div class="space-y-1 opacity-80">
+              <div class="flex gap-4"><span class="text-text-tertiary">1</span> <span class="text-purple-400">import</span> { Varuna } <span class="text-purple-400">from</span> <span class="text-brand">'varuna'</span>;</div>
+              <div class="flex gap-4"><span class="text-text-tertiary">2</span></div>
+              <div class="flex gap-4"><span class="text-text-tertiary">3</span> <span class="text-purple-400">const</span> guardian = <span class="text-purple-400">new</span> <span class="text-yellow-400">Varuna</span>({</div>
+              <div class="flex gap-4"><span class="text-text-tertiary">4</span> <span class="pl-4">wallet: agentWallet,</span></div>
+              <div class="flex gap-4"><span class="text-text-tertiary">5</span> <span class="pl-4">autonomy: <span class="text-brand">'full-auto'</span></span></div>
+              <div class="flex gap-4"><span class="text-text-tertiary">6</span> });</div>
+              <div class="flex gap-4"><span class="text-text-tertiary">7</span></div>
+              <div class="flex gap-4"><span class="text-text-tertiary">8</span> <span class="text-purple-400">await</span> guardian.<span class="text-blue-400">start</span>();</div>
+            </div>
+
+            <!-- Status -->
+            <div class="absolute bottom-6 right-6 bg-brand text-black px-3 py-1 rounded text-[10px] font-bold animate-pulse">
+              PROTECTED
+            </div>
+          </div>
+        </div>
+
+        <!-- Decorative circles -->
+        <div class="absolute -z-10 w-[120%] h-[120%] border border-line-subtle rounded-full opacity-20 animate-[spin_20s_linear_infinite]"></div>
+        <div class="absolute -z-10 w-[80%] h-[80%] border border-dashed border-line-subtle rounded-full opacity-20 animate-[spin_15s_linear_infinite_reverse]"></div>
+      </div>
+    </div>
+
+    <!-- Scrolling Ticker -->
+    <div class="absolute bottom-0 left-0 w-full border-t border-line-subtle bg-bg-main/90 backdrop-blur-sm overflow-hidden py-3">
+      <div class="flex whitespace-nowrap animate-ticker font-mono text-[10px] text-text-secondary tracking-widest gap-12 items-center">
+        <span>KAMINO <span class="text-brand">$2B+ TVL</span></span>
+        <span>MARGINFI <span class="text-brand">$500M+ TVL</span></span>
+        <span>SOLEND <span class="text-brand">$300M+ TVL</span></span>
+        <span class="text-brand">● PROTECTION ACTIVE</span>
+        <span>YIELD BOOST: <span class="text-white">+70%</span></span>
+        <span>INTEGRATION: <span class="text-white">3 LINES</span></span>
+        <span>RISK SCORING: <span class="text-white">5-FACTOR</span></span>
+        <!-- Duplicate -->
+        <span>KAMINO <span class="text-brand">$2B+ TVL</span></span>
+        <span>MARGINFI <span class="text-brand">$500M+ TVL</span></span>
+        <span>SOLEND <span class="text-brand">$300M+ TVL</span></span>
+        <span class="text-brand">● PROTECTION ACTIVE</span>
+        <span>YIELD BOOST: <span class="text-white">+70%</span></span>
+        <span>INTEGRATION: <span class="text-white">3 LINES</span></span>
+        <span>RISK SCORING: <span class="text-white">5-FACTOR</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem Section -->
+  <section class="py-32 px-6 border-b border-line-subtle relative">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-end mb-20">
+        <div>
+          <h2 class="font-sans font-light text-4xl md:text-5xl text-white mb-4">The <span class="text-danger">$100M</span><br>Problem.</h2>
+          <p class="font-mono text-sm text-text-secondary">DeFi agents lose millions to liquidation every month.</p>
+        </div>
+        <div class="hidden md:block">
+          <iconify-icon icon="solar:danger-triangle-linear" width="40" class="text-danger opacity-50"></iconify-icon>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-bg-surface border border-danger/20 p-6 rounded-xl">
+          <div class="w-10 h-10 rounded-full border border-danger/30 flex items-center justify-center mb-4 bg-danger/5">
+            <iconify-icon icon="solar:close-circle-linear" class="text-danger" width="20"></iconify-icon>
+          </div>
+          <h3 class="text-lg text-white font-medium mb-2">Dumb Protection</h3>
+          <p class="text-text-secondary font-mono text-xs">Every tool just dumps collateral when health drops. No optimization.</p>
+        </div>
+
+        <div class="bg-bg-surface border border-danger/20 p-6 rounded-xl">
+          <div class="w-10 h-10 rounded-full border border-danger/30 flex items-center justify-center mb-4 bg-danger/5">
+            <iconify-icon icon="solar:graph-down-linear" class="text-danger" width="20"></iconify-icon>
+          </div>
+          <h3 class="text-lg text-white font-medium mb-2">Yield Destruction</h3>
+          <p class="text-text-secondary font-mono text-xs">Position saved but earnings destroyed. Sold at the worst time.</p>
+        </div>
+
+        <div class="bg-bg-surface border border-danger/20 p-6 rounded-xl">
+          <div class="w-10 h-10 rounded-full border border-danger/30 flex items-center justify-center mb-4 bg-danger/5">
+            <iconify-icon icon="solar:sleeping-circle-linear" class="text-danger" width="20"></iconify-icon>
+          </div>
+          <h3 class="text-lg text-white font-medium mb-2">No Optimization</h3>
+          <p class="text-text-secondary font-mono text-xs">Collateral earns base yield when it could earn 70% more.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Solution Section -->
+  <section class="py-32 px-6 border-b border-line-subtle relative">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-end mb-20">
+        <div>
+          <h2 class="font-sans font-light text-4xl md:text-5xl text-white mb-4">Varuna:<br><span class="text-brand">Smart Protection.</span></h2>
+          <p class="font-mono text-sm text-text-secondary">Yield-aware protection that preserves earnings.</p>
+        </div>
+        <div class="hidden md:block">
+          <iconify-icon icon="solar:shield-check-linear" width="40" class="text-brand opacity-50"></iconify-icon>
+        </div>
+      </div>
+
+      <!-- Protection Comparison -->
+      <div class="bg-[#050505] border border-line-strong rounded-xl p-8 font-mono text-sm">
+        <div class="flex items-center gap-2 mb-6">
+          <div class="w-2 h-2 bg-warning rounded-full animate-pulse"></div>
+          <span class="text-text-secondary text-xs">Health drops to 1.2 (danger zone)</span>
+        </div>
+
+        <div class="grid md:grid-cols-3 gap-6 mb-8">
+          <div class="bg-white/5 p-4 rounded border border-line-subtle">
+            <div class="text-brand text-xs mb-2">Option A</div>
+            <div class="text-white mb-1">Add $200 collateral</div>
+            <div class="text-text-secondary text-xs">yield unchanged, cost $200</div>
+          </div>
+          <div class="bg-brand/10 p-4 rounded border border-brand/30">
+            <div class="text-brand text-xs mb-2">Option B <span class="bg-brand text-black px-2 py-0.5 rounded text-[9px] ml-2">SELECTED</span></div>
+            <div class="text-white mb-1">Repay $150 debt</div>
+            <div class="text-text-secondary text-xs">APY 10.5% → 9.2%, cost $150</div>
+          </div>
+          <div class="bg-white/5 p-4 rounded border border-line-subtle">
+            <div class="text-brand text-xs mb-2">Option C</div>
+            <div class="text-white mb-1">Unwind 1 leverage loop</div>
+            <div class="text-text-secondary text-xs">APY 10.5% → 8.0%, cost $0</div>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4 pt-6 border-t border-line-subtle">
+          <div class="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center">
+            <iconify-icon icon="solar:check-circle-bold" class="text-brand" width="24"></iconify-icon>
+          </div>
+          <div>
+            <div class="text-white">Varuna picks Option B: <span class="text-brand">lowest total cost</span></div>
+            <div class="text-text-secondary text-xs">Result: Position safe. Earnings maximized.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-32 px-6 border-b border-line-subtle relative">
+    <div class="max-w-7xl mx-auto">
+      <div class="flex flex-col md:flex-row justify-between items-end mb-20">
+        <div>
+          <h2 class="font-sans font-light text-4xl md:text-5xl text-white mb-4">Infrastructure<br>as an Edge.</h2>
+          <p class="font-mono text-sm text-text-secondary">Complete risk infrastructure in one SDK.</p>
+        </div>
+      </div>
+
+      <!-- Bento Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-4 h-auto md:h-[600px]">
+
+        <!-- Main Card -->
+        <div class="md:col-span-2 md:row-span-2 bg-bg-surface border border-line-subtle p-8 relative overflow-hidden group tech-card rounded-xl">
+          <div class="relative z-10 flex flex-col h-full justify-between">
+            <div>
+              <div class="w-10 h-10 rounded-full border border-line-strong flex items-center justify-center mb-6 bg-white/5 card-icon transition-transform duration-300">
+                <iconify-icon icon="solar:shield-check-linear" class="text-white" width="20"></iconify-icon>
+              </div>
+              <h3 class="text-2xl text-white font-medium mb-2">Yield-Aware Protection</h3>
+              <p class="text-text-secondary font-mono text-xs leading-relaxed max-w-sm">
+                Calculates yield impact of every protection option. Chooses the path that preserves the most earnings while restoring safety.
+              </p>
+            </div>
+
+            <div class="mt-8 border-t border-line-subtle pt-6">
+              <div class="flex justify-between font-mono text-[10px] text-text-secondary mb-2">
+                <span>PROTECTION STRATEGIES</span>
+                <span><span class="text-brand">3</span> MODES</span>
+              </div>
+              <div class="flex justify-between mt-4 gap-2">
+                <div class="h-16 w-full bg-white/5 border border-line-subtle rounded flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <span class="font-mono text-xs text-text-secondary">YIELD</span>
+                </div>
+                <div class="h-16 w-full bg-white/5 border border-line-subtle rounded flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <span class="font-mono text-xs text-text-secondary">COST</span>
+                </div>
+                <div class="h-16 w-full bg-white/5 border border-line-subtle rounded flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                  <span class="font-mono text-xs text-text-secondary">SPEED</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Scoring -->
+        <div class="md:col-span-2 bg-bg-surface border border-line-subtle p-8 relative overflow-hidden group tech-card rounded-xl flex items-center justify-between">
+          <div class="max-w-xs relative z-10">
+            <h3 class="text-xl text-white font-medium mb-2">5-Factor Risk Engine</h3>
+            <p class="text-text-secondary font-mono text-xs">Health factor, trend velocity, utilization, concentration, and protocol risk.</p>
+          </div>
+          <div class="relative w-24 h-24">
+            <svg class="w-full h-full" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="40" stroke="#333" stroke-width="1" fill="none"></circle>
+              <circle cx="50" cy="50" r="40" stroke="#00FF94" stroke-width="2" fill="none" stroke-dasharray="70 180" class="animate-spin" style="animation-duration: 8s;"></circle>
+              <circle cx="50" cy="50" r="20" fill="#00FF94" fill-opacity="0.1"></circle>
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center font-mono text-lg text-brand font-bold">5</div>
+          </div>
+        </div>
+
+        <!-- SDK -->
+        <div class="md:col-span-1 bg-bg-surface border border-line-subtle p-6 relative overflow-hidden group tech-card rounded-xl">
+          <div class="absolute top-4 right-4 text-text-tertiary">
+            <iconify-icon icon="solar:code-file-linear" width="24"></iconify-icon>
+          </div>
+          <div class="mt-8">
+            <div class="font-mono text-[10px] text-brand mb-1">SDK</div>
+            <h3 class="text-lg text-white mb-2">3 Lines</h3>
+            <div class="bg-black/50 p-2 rounded border border-line-subtle mt-4">
+              <code class="font-mono text-[10px] text-text-secondary">
+                import { Varuna }<br>
+                new Varuna(config)<br>
+                await start()
+              </code>
+            </div>
+          </div>
+        </div>
+
+        <!-- WebSocket -->
+        <div class="md:col-span-1 bg-bg-surface border border-line-subtle p-6 relative overflow-hidden group tech-card rounded-xl">
+          <div class="absolute top-4 right-4 text-text-tertiary">
+            <iconify-icon icon="solar:bolt-linear" width="24"></iconify-icon>
+          </div>
+          <div class="mt-8">
+            <div class="font-mono text-[10px] text-brand mb-1">REAL-TIME</div>
+            <h3 class="text-lg text-white mb-2">WebSocket</h3>
+            <div class="flex items-center gap-2 mt-4">
+              <div class="w-2 h-2 bg-brand rounded-full animate-pulse"></div>
+              <span class="font-mono text-[10px] text-white">6 EVENT TYPES</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section id="how-it-works" class="py-24 bg-[#050505] relative overflow-hidden">
+    <div class="absolute inset-0 flex justify-center gap-[20%] opacity-10 pointer-events-none">
+      <div class="w-[1px] h-full bg-white"></div>
+      <div class="w-[1px] h-full bg-white"></div>
+      <div class="w-[1px] h-full bg-white"></div>
+    </div>
+
+    <div class="max-w-5xl mx-auto px-6 relative z-10 text-center">
+      <div class="inline-block mb-4 px-3 py-1 rounded-full border border-line-subtle bg-white/5 backdrop-blur-sm">
+        <span class="font-mono text-[10px] text-brand tracking-widest uppercase">Continuous Protection</span>
+      </div>
+      <h2 class="text-3xl md:text-5xl font-light text-white mb-16 tracking-tight">6-Step Protection<br>Pipeline.</h2>
+
+      <!-- Pipeline -->
+      <div class="relative w-full h-48 md:h-64 border-x border-line-subtle flex items-center justify-between px-8 group">
+        <div class="absolute inset-0 bg-gradient-to-r from-transparent via-brand/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
+
+        <div class="relative z-10 text-center">
+          <div class="w-14 h-14 rounded-xl bg-[#0A0A0A] border border-line-strong flex items-center justify-center mb-3 mx-auto group-hover:border-brand/50 transition-colors">
+            <iconify-icon icon="solar:eye-linear" width="24" class="text-text-secondary group-hover:text-brand transition-colors"></iconify-icon>
+          </div>
+          <div class="font-mono text-[10px] text-text-secondary uppercase">Monitor</div>
+        </div>
+
+        <div class="flex-1 h-[1px] bg-line-strong relative mx-2">
+          <div class="absolute top-1/2 -translate-y-1/2 left-0 w-8 h-[2px] bg-brand shadow-[0_0_10px_#00FF94] animate-[ticker_2s_linear_infinite_reverse]"></div>
+        </div>
+
+        <div class="relative z-10 text-center">
+          <div class="w-14 h-14 rounded-xl bg-[#0A0A0A] border border-line-strong flex items-center justify-center mb-3 mx-auto group-hover:border-brand/50 transition-colors">
+            <iconify-icon icon="solar:chart-2-linear" width="24" class="text-text-secondary group-hover:text-brand transition-colors"></iconify-icon>
+          </div>
+          <div class="font-mono text-[10px] text-text-secondary uppercase">Assess</div>
+        </div>
+
+        <div class="flex-1 h-[1px] bg-line-strong relative mx-2">
+          <div class="absolute top-1/2 -translate-y-1/2 left-0 w-8 h-[2px] bg-brand shadow-[0_0_10px_#00FF94] animate-[ticker_2s_linear_infinite_reverse]" style="animation-delay: 0.5s;"></div>
+        </div>
+
+        <div class="relative z-10 text-center">
+          <div class="w-16 h-16 rounded-full bg-[#0A0A0A] border border-brand/30 flex items-center justify-center mb-3 mx-auto shadow-[0_0_30px_rgba(0,255,148,0.1)]">
+            <iconify-icon icon="solar:shield-check-linear" width="28" class="text-brand"></iconify-icon>
+          </div>
+          <div class="font-mono text-[10px] text-white uppercase font-bold">Protect</div>
+        </div>
+
+        <div class="flex-1 h-[1px] bg-line-strong relative mx-2">
+          <div class="absolute top-1/2 -translate-y-1/2 right-0 w-8 h-[2px] bg-white shadow-[0_0_10px_white] animate-[ticker_2s_linear_infinite]"></div>
+        </div>
+
+        <div class="relative z-10 text-center">
+          <div class="w-14 h-14 rounded-xl bg-[#0A0A0A] border border-line-strong flex items-center justify-center mb-3 mx-auto group-hover:border-white/50 transition-colors">
+            <iconify-icon icon="solar:graph-up-linear" width="24" class="text-text-secondary group-hover:text-white transition-colors"></iconify-icon>
+          </div>
+          <div class="font-mono text-[10px] text-text-secondary uppercase">Optimize</div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mt-12 border-t border-line-subtle pt-12">
+        <div>
+          <div class="font-mono text-3xl text-white mb-1">3<span class="text-brand text-lg">+</span></div>
+          <div class="font-mono text-[10px] text-text-secondary uppercase">Protocols</div>
+        </div>
+        <div>
+          <div class="font-mono text-3xl text-white mb-1">$2.8B<span class="text-brand text-lg">+</span></div>
+          <div class="font-mono text-[10px] text-text-secondary uppercase">TVL Covered</div>
+        </div>
+        <div>
+          <div class="font-mono text-3xl text-white mb-1">+70<span class="text-brand text-lg">%</span></div>
+          <div class="font-mono text-[10px] text-text-secondary uppercase">Yield Boost</div>
+        </div>
+        <div>
+          <div class="font-mono text-3xl text-white mb-1">3</div>
+          <div class="font-mono text-[10px] text-text-secondary uppercase">Lines to Integrate</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Protocols Slider -->
+  <section class="py-16 border-y border-line-subtle bg-bg-surface overflow-hidden">
+    <div class="flex w-[200%] animate-ticker hover:[animation-play-state:paused]">
+      <div class="flex justify-around w-1/2 items-center px-12 gap-12">
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Kamino</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">MarginFi</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Solend</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Jupiter</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Raydium</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Orca</span>
+      </div>
+      <div class="flex justify-around w-1/2 items-center px-12 gap-12">
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Kamino</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">MarginFi</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Solend</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Jupiter</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Raydium</span>
+        <span class="text-2xl font-bold text-line-strong uppercase font-sans tracking-tighter">Orca</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SDK Section -->
+  <section id="sdk" class="py-32 px-6 border-b border-line-subtle">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid lg:grid-cols-2 gap-16 items-center">
+        <div>
+          <h2 class="text-4xl md:text-5xl font-light text-white mb-6">
+            Integrate in<br><span class="text-brand font-bold">3 Lines.</span>
+          </h2>
+          <p class="font-mono text-sm text-text-secondary mb-8 max-w-md">
+            Import, configure, start. Your agent is protected. No complex setup, no infrastructure to manage.
+          </p>
+
+          <div class="space-y-4 mb-8">
+            <div class="flex items-center gap-3">
+              <div class="w-6 h-6 rounded-full bg-brand/20 flex items-center justify-center">
+                <iconify-icon icon="solar:check-circle-bold" class="text-brand" width="16"></iconify-icon>
+              </div>
+              <span class="font-mono text-xs text-text-secondary">TypeScript-first with full type safety</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-6 h-6 rounded-full bg-brand/20 flex items-center justify-center">
+                <iconify-icon icon="solar:check-circle-bold" class="text-brand" width="16"></iconify-icon>
+              </div>
+              <span class="font-mono text-xs text-text-secondary">Event-driven architecture</span>
+            </div>
+            <div class="flex items-center gap-3">
+              <div class="w-6 h-6 rounded-full bg-brand/20 flex items-center justify-center">
+                <iconify-icon icon="solar:check-circle-bold" class="text-brand" width="16"></iconify-icon>
+              </div>
+              <span class="font-mono text-xs text-text-secondary">3 autonomy modes: full-auto, approve, monitor</span>
+            </div>
+          </div>
+
+          <a href="#get-started" class="inline-flex bg-white hover:bg-brand text-black font-mono text-xs px-6 py-3 uppercase tracking-wide transition-all">
+            Get Started
+          </a>
+        </div>
+
+        <div class="bg-[#050505] border border-line-strong rounded-xl overflow-hidden">
+          <div class="h-10 border-b border-line-subtle bg-white/5 flex items-center justify-between px-4">
+            <div class="flex gap-2">
+              <div class="w-2 h-2 rounded-full bg-red-500/50"></div>
+              <div class="w-2 h-2 rounded-full bg-yellow-500/50"></div>
+              <div class="w-2 h-2 rounded-full bg-green-500/50"></div>
+            </div>
+            <div class="font-mono text-[10px] text-text-secondary">my-agent.ts</div>
+          </div>
+          <div class="p-6 font-mono text-xs">
+            <pre class="text-text-secondary"><code><span class="text-purple-400">import</span> { Varuna } <span class="text-purple-400">from</span> <span class="text-brand">'varuna'</span>;
+
+<span class="text-purple-400">const</span> guardian = <span class="text-purple-400">new</span> <span class="text-yellow-400">Varuna</span>({
+  wallet: agentWallet,
+  strategy: {
+    autonomy: <span class="text-brand">'full-auto'</span>,
+    yieldAwareProtection: <span class="text-orange-400">true</span>
+  }
+});
+
+<span class="text-purple-400">await</span> guardian.<span class="text-blue-400">start</span>();  <span class="text-text-tertiary">// That's it!</span>
+
+<span class="text-text-tertiary">// Listen for events</span>
+guardian.<span class="text-blue-400">on</span>(<span class="text-brand">'alert'</span>, ({ riskLevel }) => {
+  console.<span class="text-blue-400">log</span>(<span class="text-brand">`Risk: ${riskLevel}`</span>);
+});
+
+guardian.<span class="text-blue-400">on</span>(<span class="text-brand">'protection'</span>, ({ result }) => {
+  console.<span class="text-blue-400">log</span>(<span class="text-brand">`Protected! HF: ${result.newHF}`</span>);
+});</code></pre>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section id="pricing" class="py-32 px-6 border-b border-line-subtle">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <div class="inline-block mb-4 px-3 py-1 rounded-full border border-line-subtle bg-white/5">
+          <span class="font-mono text-[10px] text-brand tracking-widest uppercase">x402 Protocol</span>
+        </div>
+        <h2 class="text-4xl md:text-5xl font-light text-white mb-4">Pay-Per-Call<br><span class="text-brand font-bold">Pricing.</span></h2>
+        <p class="font-mono text-sm text-text-secondary">Solana USDC micropayments. No subscriptions, no API keys.</p>
+      </div>
+
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Free -->
+        <div class="bg-bg-surface border border-line-subtle p-6 rounded-xl">
+          <div class="font-mono text-[10px] text-text-secondary mb-2">FREE</div>
+          <div class="text-3xl font-bold text-white mb-4">$0</div>
+          <ul class="space-y-2 text-xs font-mono text-text-secondary">
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Health check
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Monitor status
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Yield leaderboard
+            </li>
+          </ul>
+        </div>
+
+        <!-- Standard -->
+        <div class="bg-bg-surface border border-line-subtle p-6 rounded-xl">
+          <div class="font-mono text-[10px] text-brand mb-2">STANDARD</div>
+          <div class="text-3xl font-bold text-white mb-4">$0.001<span class="text-lg text-text-secondary">/call</span></div>
+          <ul class="space-y-2 text-xs font-mono text-text-secondary">
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              All positions
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Health trend
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Liquidation events
+            </li>
+          </ul>
+        </div>
+
+        <!-- Premium -->
+        <div class="bg-bg-surface border border-brand/30 p-6 rounded-xl relative">
+          <div class="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-brand text-black rounded text-[9px] font-bold uppercase">
+            Popular
+          </div>
+          <div class="font-mono text-[10px] text-brand mb-2">PREMIUM</div>
+          <div class="text-3xl font-bold text-white mb-4">$0.005<span class="text-lg text-text-secondary">/call</span></div>
+          <ul class="space-y-2 text-xs font-mono text-text-secondary">
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              5-factor risk score
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Protection options
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Yield optimization
+            </li>
+          </ul>
+        </div>
+
+        <!-- Execution -->
+        <div class="bg-bg-surface border border-line-subtle p-6 rounded-xl">
+          <div class="font-mono text-[10px] text-purple-400 mb-2">EXECUTION</div>
+          <div class="text-3xl font-bold text-white mb-4">$0.01<span class="text-lg text-text-secondary">/call</span></div>
+          <ul class="space-y-2 text-xs font-mono text-text-secondary">
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Execute protection
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              On-chain transactions
+            </li>
+            <li class="flex items-center gap-2">
+              <iconify-icon icon="solar:check-circle-linear" class="text-brand"></iconify-icon>
+              Yield-aware routing
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="text-center mt-8 font-mono text-[10px] text-text-secondary">
+        Powered by <span class="text-brand">x402</span> protocol &bull; Facilitated by <span class="text-brand">PayAI</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- For Judges Section -->
+  <section id="judges" class="py-16 px-6 bg-[#050505] border-y border-brand/20">
+    <div class="max-w-4xl mx-auto">
+      <div class="text-center mb-8">
+        <div class="inline-block mb-3 px-3 py-1 rounded-full border border-brand/30 bg-brand/10">
+          <span class="font-mono text-[10px] text-brand tracking-widest uppercase">Hackathon Judges</span>
+        </div>
+        <h2 class="text-2xl md:text-3xl font-light text-white">Free API Access for Testing</h2>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- Demo Page -->
+        <div class="bg-bg-surface border border-line-subtle p-6 rounded-xl">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center">
+              <iconify-icon icon="solar:monitor-linear" class="text-brand" width="20"></iconify-icon>
+            </div>
+            <div>
+              <h3 class="text-white font-medium">Demo Dashboard</h3>
+              <p class="font-mono text-[10px] text-text-secondary">Full access, no payment required</p>
+            </div>
+          </div>
+          <a href="demo.html" class="block w-full bg-brand/20 hover:bg-brand/30 text-brand font-mono text-xs text-center py-3 rounded transition-colors">
+            demo.html →
+          </a>
+        </div>
+
+        <!-- API Access -->
+        <div class="bg-bg-surface border border-line-subtle p-6 rounded-xl">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 rounded-full bg-brand/20 flex items-center justify-center">
+              <iconify-icon icon="solar:code-linear" class="text-brand" width="20"></iconify-icon>
+            </div>
+            <div>
+              <h3 class="text-white font-medium">Direct API Access</h3>
+              <p class="font-mono text-[10px] text-text-secondary">Use bypass header to skip x402 payment</p>
+            </div>
+          </div>
+          <div class="bg-black/50 p-3 rounded border border-line-subtle font-mono text-[10px]">
+            <span class="text-text-secondary">Header:</span> <span class="text-brand">X-Varuna-Demo</span><br>
+            <span class="text-text-secondary">Value:</span> <span class="text-white">VARUNA-JUDGE-2026</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Code Example -->
+      <div class="mt-6 bg-black/50 p-4 rounded-xl border border-line-subtle">
+        <div class="font-mono text-[10px] text-text-secondary mb-2">CURL EXAMPLE</div>
+        <code class="font-mono text-xs text-text-secondary">
+          curl -H <span class="text-brand">"X-Varuna-Demo: VARUNA-JUDGE-2026"</span> \<br>
+          <span class="pl-4">http://localhost:3000/api/risk/YOUR_WALLET</span>
+        </code>
+      </div>
+
+      <p class="text-center font-mono text-[10px] text-text-tertiary mt-6">
+        Response includes <span class="text-brand">_x402.demo: true</span> to indicate demo access
+      </p>
+    </div>
+  </section>
+
+  <!-- Footer CTA -->
+  <footer id="get-started" class="pt-24 pb-12 bg-bg-main relative">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-12 mb-24">
+        <div>
+          <h2 class="text-5xl md:text-6xl font-sans font-medium text-white tracking-tight mb-6">
+            Start <span class="text-brand">Protection.</span>
+          </h2>
+          <div class="flex gap-4">
+            <a href="https://github.com/pranatha-orb/varuna" target="_blank" class="bg-white hover:bg-brand text-black font-mono text-xs px-8 py-4 uppercase tracking-wide transition-all duration-300 flex items-center gap-2">
+              <iconify-icon icon="mdi:github"></iconify-icon>
+              View GitHub
+            </a>
+            <a href="demo.html" class="bg-transparent border border-white/20 hover:border-brand text-white font-mono text-xs px-8 py-4 uppercase tracking-wide transition-all duration-300">
+              Live Demo
+            </a>
+          </div>
+        </div>
+        <div class="flex items-end justify-start md:justify-end">
+          <div class="text-right">
+            <div class="font-mono text-[10px] text-text-secondary mb-2">HACKATHON</div>
+            <div class="font-mono text-xl text-white">Colosseum 2026 <span class="text-brand">Feb</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 border-t border-line-subtle pt-12">
+        <div class="col-span-2 md:col-span-1">
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-2 h-2 bg-brand rounded-sm"></div>
+            <span class="font-mono font-bold tracking-tighter text-sm">VARUNA_</span>
+          </div>
+          <p class="font-mono text-[10px] text-text-secondary leading-relaxed max-w-[200px]">
+            The risk layer for the next generation of DeFi agents on Solana.
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-4">
+          <a href="#features" class="font-mono text-[11px] text-text-secondary hover:text-white uppercase tracking-wider">Features</a>
+          <a href="#how-it-works" class="font-mono text-[11px] text-text-secondary hover:text-white uppercase tracking-wider">Architecture</a>
+          <a href="#pricing" class="font-mono text-[11px] text-text-secondary hover:text-white uppercase tracking-wider">Pricing</a>
+        </div>
+
+        <div class="flex flex-col gap-4">
+          <a href="demo.html" class="font-mono text-[11px] text-text-secondary hover:text-white uppercase tracking-wider">Demo</a>
+          <a href="https://github.com/pranatha-orb/varuna" class="font-mono text-[11px] text-text-secondary hover:text-white uppercase tracking-wider">GitHub</a>
+          <a href="#sdk" class="font-mono text-[11px] text-text-secondary hover:text-white uppercase tracking-wider">SDK</a>
+        </div>
+
+        <div class="col-span-2 md:col-span-1">
+          <div class="w-full bg-white/5 rounded border border-line-subtle p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-mono text-[9px] text-text-secondary">PROTECTION STATUS</span>
+              <span class="font-mono text-[9px] text-brand">ACTIVE</span>
+            </div>
+            <div class="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+              <div class="w-full h-full bg-brand animate-pulse"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-20 pt-8 border-t border-line-subtle flex flex-col md:flex-row justify-between items-center gap-4">
+        <p class="font-mono text-[10px] text-text-tertiary">© 2026 VARUNA. BUILT BY AI-NAN FOR COLOSSEUM HACKATHON.</p>
+        <div class="flex gap-4">
+          <a href="https://github.com/pranatha-orb/varuna" target="_blank">
+            <iconify-icon icon="mdi:github" class="text-text-tertiary hover:text-white transition-colors cursor-pointer"></iconify-icon>
+          </a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

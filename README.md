@@ -197,6 +197,28 @@ npm start
 
 Server starts on `http://localhost:3000` with WebSocket on `ws://localhost:3000/ws`.
 
+## For Hackathon Judges
+
+**Demo page with full access (no payment required):**
+```
+http://localhost:3000/demo.html
+```
+
+**Direct API access with bypass header:**
+```bash
+# Add this header to skip x402 payment requirement
+curl -H "X-Varuna-Demo: VARUNA-JUDGE-2026" \
+  http://localhost:3000/api/risk/YOUR_WALLET_ADDRESS
+```
+
+| Access Method | How |
+|--------------|-----|
+| **Demo Page** | `http://localhost:3000/demo.html` — auto-bypass |
+| **API (curl)** | Add header `X-Varuna-Demo: VARUNA-JUDGE-2026` |
+| **Postman** | Add header `X-Varuna-Demo` with value `VARUNA-JUDGE-2026` |
+
+Response includes `_x402.demo: true` to indicate demo access.
+
 ## API Reference
 
 ### Monitoring
@@ -249,6 +271,61 @@ Server starts on `http://localhost:3000` with WebSocket on `ws://localhost:3000/
 |----------|-------------|
 | `ws://localhost:3000/ws` | Real-time alerts + liquidation feed |
 | GET `/api/ws/stats` | WebSocket connection statistics |
+
+### Pricing & Payments
+| Endpoint | Description |
+|----------|-------------|
+| GET `/api/pricing` | API pricing info (tiers, facilitator, token) |
+
+## x402 Micropayments (Pay-Per-Call API)
+
+Varuna supports [x402](https://x402.org) micropayments for monetizing high-value API endpoints. Agents pay per call using Solana USDC — no subscriptions, no API keys.
+
+### Pricing Tiers
+
+| Tier | Price | Endpoints |
+|------|-------|-----------|
+| **Free** | $0 | `/health`, `/api/status`, `/api/health/:wallet`, `/api/yields/:protocol` |
+| **Standard** | $0.001 | `/api/positions/:wallet`, `/api/liquidations`, `/api/risk/.../trend` |
+| **Premium** | $0.003-0.005 | `/api/risk/:wallet`, `/api/protect/:wallet/:protocol` (GET), `/api/collateral/:wallet` |
+| **Execution** | $0.01 | `/api/protect/:wallet/:protocol` (POST) |
+
+### How It Works
+
+```bash
+# 1. Request without payment → 402 Payment Required
+curl http://api.varuna.xyz/api/risk/YOUR_WALLET
+# → { "x402Version": 2, "error": "Payment required", "accepts": [...], ... }
+
+# 2. Pay via x402 client → Automatic USDC payment
+# 3. Retry with payment header → 200 OK + data
+```
+
+### Agent Integration
+
+```typescript
+import { createX402Client } from 'x402-solana/client';
+
+const client = createX402Client({
+  wallet: agentKeypair,
+  network: 'solana-devnet',
+});
+
+// Automatically pays $0.005 USDC for risk assessment
+const risk = await client.fetch('http://api.varuna.xyz/api/risk/YOUR_WALLET');
+```
+
+### Configuration
+
+```bash
+# Enable x402 payments in .env
+X402_ENABLED=true
+VARUNA_PAYMENT_WALLET=your-solana-wallet-address
+X402_NETWORK=devnet  # or 'mainnet'
+X402_FACILITATOR_URL=https://facilitator.payai.network
+```
+
+Uses [PayAI Facilitator](https://facilitator.payai.network) — no API keys required, free tier with 100K settlements/month.
 
 ## Architecture
 

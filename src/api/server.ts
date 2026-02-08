@@ -1,15 +1,58 @@
 import express, { Request, Response } from 'express';
+import path from 'path';
 import { PositionMonitor } from '../services/monitor';
 import { ProtectionConfig } from '../types';
+import {
+  x402Config,
+  getNetworkName,
+  varunaPaymentMiddleware,
+  addPaymentReceipt,
+  pricingEndpoint,
+} from './x402';
 
 export function createServer(monitor: PositionMonitor) {
   const app = express();
   app.use(express.json());
 
-  // Health check
-  app.get('/health', (req: Request, res: Response) => {
-    res.json({ status: 'ok', service: 'varuna' });
+  // ─── CORS for API access ──────────────────────────────────────────
+  app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, X-Payment, Payment-Signature');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
   });
+
+  // ─── Static files (landing page + demo) ───────────────────────────
+  const publicPath = path.join(__dirname, '../../public');
+  app.use(express.static(publicPath));
+
+  // ─── x402 Payment Integration ───────────────────────────────────
+  // Apply payment middleware BEFORE routes
+  app.use(varunaPaymentMiddleware());
+  app.use(addPaymentReceipt());
+
+  // Log x402 status
+  if (x402Config.enabled) {
+    console.log('[Varuna] x402 payments ENABLED (Solana USDC)');
+    console.log(`[Varuna]   Wallet: ${x402Config.walletAddress}`);
+    console.log(`[Varuna]   Network: ${getNetworkName()}`);
+    console.log(`[Varuna]   Facilitator: ${x402Config.facilitatorUrl}`);
+  } else {
+    console.log('[Varuna] x402 payments DISABLED (set X402_ENABLED=true to enable)');
+  }
+
+  // ─── Core Endpoints ─────────────────────────────────────────────
+
+  // Health check (FREE)
+  app.get('/health', (req: Request, res: Response) => {
+    res.json({ status: 'ok', service: 'varuna', x402Enabled: x402Config.enabled });
+  });
+
+  // Pricing info (FREE)
+  app.get('/api/pricing', pricingEndpoint());
 
   // Get monitor status
   app.get('/api/status', (req: Request, res: Response) => {

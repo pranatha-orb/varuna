@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-[#020202]">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VARUNA | Risk Dashboard</title>
+  <meta name="description" content="Live demo of Varuna's DeFi risk monitoring and protection capabilities.">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+  <!-- Tailwind -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Iconify -->
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: {
+              main: '#020202',
+              surface: '#080808',
+              hover: '#0D0D0D'
+            },
+            line: {
+              subtle: 'rgba(255, 255, 255, 0.06)',
+              strong: 'rgba(255, 255, 255, 0.15)',
+            },
+            text: {
+              primary: '#EDEDED',
+              secondary: '#666666',
+              tertiary: '#333333'
+            },
+            brand: {
+              DEFAULT: '#00FF94',
+              dim: 'rgba(0, 255, 148, 0.1)',
+            },
+            danger: '#ef4444',
+            warning: '#eab308',
+            safe: '#22c55e'
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          animation: {
+            'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'scan': 'scan 4s linear infinite',
+          },
+          keyframes: {
+            scan: {
+              '0%': { transform: 'translateY(-100%)' },
+              '100%': { transform: 'translateY(100%)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #020202;
+      color: #EDEDED;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .noise {
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    .glass {
+      background: rgba(8, 8, 8, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #020202; }
+    ::-webkit-scrollbar-thumb { background: #333; }
+    ::-webkit-scrollbar-thumb:hover { background: #00FF94; }
+
+    .grid-bg {
+      background-size: 40px 40px;
+      background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                        linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+    }
+
+    .log-entry {
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-10px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  </style>
+</head>
+
+<body class="selection:bg-brand selection:text-black font-sans relative min-h-screen grid-bg">
+  <div class="noise"></div>
+
+  <!-- Decorative Lines -->
+  <div class="fixed top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent z-50"></div>
+  <div class="fixed bottom-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-white/10 to-transparent z-50"></div>
+
+  <!-- Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 px-6 py-4 flex justify-between items-center bg-bg-main/80 backdrop-blur-md border-b border-line-subtle">
+    <a href="index.html" class="flex items-center gap-2">
+      <div class="w-3 h-3 bg-brand rounded-sm animate-pulse-fast"></div>
+      <span class="font-mono font-bold tracking-tighter text-xl">VARUNA_</span>
+      <span class="font-mono text-[10px] text-text-secondary ml-2 border border-line-subtle px-2 py-0.5 rounded">DASHBOARD</span>
+    </a>
+
+    <div class="flex items-center gap-6">
+      <div class="flex items-center gap-2">
+        <div class="w-2 h-2 rounded-full bg-brand animate-pulse" id="status-dot"></div>
+        <span class="font-mono text-[10px] text-text-secondary" id="connection-status">CONNECTING...</span>
+      </div>
+      <a href="index.html" class="font-mono text-[10px] text-text-secondary hover:text-white transition-colors uppercase tracking-widest">
+        ← BACK
+      </a>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="pt-24 pb-12 px-6">
+    <div class="max-w-7xl mx-auto">
+
+      <!-- Header -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
+        <div>
+          <h1 class="text-3xl font-light text-white mb-2">Risk Dashboard</h1>
+          <p class="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Real-time monitoring & protection</p>
+        </div>
+        <div class="font-mono text-[10px] text-text-secondary" id="last-updated">--</div>
+      </div>
+
+      <!-- Wallet Input -->
+      <div class="mb-8 p-6 bg-bg-surface border border-line-subtle rounded-xl">
+        <div class="flex flex-col md:flex-row gap-4">
+          <div class="flex-1 relative group">
+            <div class="absolute -inset-0.5 bg-gradient-to-r from-brand/20 to-transparent rounded opacity-0 group-focus-within:opacity-100 transition duration-300 blur"></div>
+            <div class="relative flex items-center bg-black border border-line-strong rounded">
+              <span class="pl-4 pr-2 font-mono text-brand text-sm">$</span>
+              <input
+                type="text"
+                id="wallet-input"
+                placeholder="Enter Solana wallet address..."
+                class="bg-transparent border-none text-white font-mono text-sm w-full focus:ring-0 focus:outline-none h-12 placeholder-text-tertiary"
+              >
+            </div>
+          </div>
+          <button
+            id="analyze-btn"
+            class="bg-white hover:bg-brand text-black font-mono text-xs px-6 py-3 uppercase tracking-wide transition-all flex items-center gap-2"
+          >
+            <iconify-icon icon="solar:shield-check-bold"></iconify-icon>
+            Analyze
+          </button>
+          <button
+            id="demo-btn"
+            class="bg-transparent border border-brand/30 hover:border-brand text-brand font-mono text-xs px-6 py-3 uppercase tracking-wide transition-all flex items-center gap-2"
+          >
+            <iconify-icon icon="solar:play-bold"></iconify-icon>
+            Run Demo
+          </button>
+        </div>
+      </div>
+
+      <!-- Dashboard Grid -->
+      <div class="grid lg:grid-cols-3 gap-6">
+        <!-- Left Column -->
+        <div class="lg:col-span-2 space-y-6">
+
+          <!-- Risk Overview -->
+          <div class="bg-bg-surface border border-line-subtle rounded-xl overflow-hidden">
+            <div class="h-10 border-b border-line-subtle bg-white/5 flex items-center justify-between px-4">
+              <span class="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Risk Overview</span>
+              <div class="w-2 h-2 bg-brand rounded-full animate-pulse"></div>
+            </div>
+
+            <div class="p-6">
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="risk-overview">
+                <div class="bg-black/30 border border-line-subtle rounded-lg p-4 text-center">
+                  <div class="font-mono text-2xl text-text-tertiary mb-1" id="overall-score">--</div>
+                  <div class="font-mono text-[9px] text-text-secondary uppercase">Risk Score</div>
+                </div>
+                <div class="bg-black/30 border border-line-subtle rounded-lg p-4 text-center">
+                  <div class="font-mono text-2xl text-text-tertiary mb-1" id="overall-level">--</div>
+                  <div class="font-mono text-[9px] text-text-secondary uppercase">Risk Level</div>
+                </div>
+                <div class="bg-black/30 border border-line-subtle rounded-lg p-4 text-center">
+                  <div class="font-mono text-2xl text-text-tertiary mb-1" id="position-count">--</div>
+                  <div class="font-mono text-[9px] text-text-secondary uppercase">Positions</div>
+                </div>
+                <div class="bg-black/30 border border-line-subtle rounded-lg p-4 text-center">
+                  <div class="font-mono text-2xl text-text-tertiary mb-1" id="lowest-hf">--</div>
+                  <div class="font-mono text-[9px] text-text-secondary uppercase">Lowest HF</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Positions -->
+          <div class="bg-bg-surface border border-line-subtle rounded-xl overflow-hidden">
+            <div class="h-10 border-b border-line-subtle bg-white/5 flex items-center justify-between px-4">
+              <span class="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Protocol Positions</span>
+            </div>
+
+            <div class="p-6" id="positions-container">
+              <div class="text-center py-12">
+                <iconify-icon icon="solar:wallet-linear" width="40" class="text-text-tertiary mb-4"></iconify-icon>
+                <p class="font-mono text-xs text-text-secondary">Enter a wallet address or run the demo</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Protection Options -->
+          <div class="bg-bg-surface border border-line-subtle rounded-xl overflow-hidden" id="protection-section" style="display: none;">
+            <div class="h-10 border-b border-line-subtle bg-brand/5 flex items-center justify-between px-4">
+              <span class="font-mono text-[10px] text-brand uppercase tracking-widest">Protection Options</span>
+              <iconify-icon icon="solar:shield-check-linear" class="text-brand"></iconify-icon>
+            </div>
+
+            <div class="p-6 space-y-3" id="protection-options">
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="space-y-6">
+
+          <!-- Yield Optimization -->
+          <div class="bg-bg-surface border border-line-subtle rounded-xl overflow-hidden">
+            <div class="h-10 border-b border-line-subtle bg-white/5 flex items-center justify-between px-4">
+              <span class="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Yield Optimization</span>
+            </div>
+
+            <div class="p-4" id="yield-recommendations">
+              <div class="text-center py-6">
+                <p class="font-mono text-[10px] text-text-tertiary">No recommendations</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Activity Log -->
+          <div class="bg-bg-surface border border-line-subtle rounded-xl overflow-hidden">
+            <div class="h-10 border-b border-line-subtle bg-white/5 flex items-center justify-between px-4">
+              <span class="font-mono text-[10px] text-text-secondary uppercase tracking-widest">Activity Log</span>
+              <button id="clear-log" class="font-mono text-[9px] text-text-tertiary hover:text-white transition-colors">CLEAR</button>
+            </div>
+
+            <div class="p-4 max-h-80 overflow-y-auto" id="activity-log">
+              <div class="text-center py-6">
+                <p class="font-mono text-[10px] text-text-tertiary">Waiting for activity...</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // ─── Config ──────────────────────────────────────────────────────
+    const API_BASE = window.location.hostname === 'localhost'
+      ? 'http://localhost:3000'
+      : window.location.origin;
+
+    // Demo/Judge bypass header (skips x402 payment)
+    const DEMO_HEADERS = {
+      'X-Varuna-Demo': 'VARUNA-JUDGE-2026'
+    };
+
+    let demoInterval = null;
+    let demoHealthFactor = 1.8;
+
+    // ─── Elements ────────────────────────────────────────────────────
+    const walletInput = document.getElementById('wallet-input');
+    const analyzeBtn = document.getElementById('analyze-btn');
+    const demoBtn = document.getElementById('demo-btn');
+    const statusDot = document.getElementById('status-dot');
+    const connectionStatus = document.getElementById('connection-status');
+    const positionsContainer = document.getElementById('positions-container');
+    const protectionSection = document.getElementById('protection-section');
+    const protectionOptions = document.getElementById('protection-options');
+    const yieldRecommendations = document.getElementById('yield-recommendations');
+    const activityLog = document.getElementById('activity-log');
+    const clearLogBtn = document.getElementById('clear-log');
+    const lastUpdated = document.getElementById('last-updated');
+
+    // ─── Utilities ───────────────────────────────────────────────────
+    function getRiskColor(level) {
+      const colors = { safe: 'text-safe', low: 'text-safe', medium: 'text-warning', high: 'text-danger', critical: 'text-danger', liquidated: 'text-danger' };
+      return colors[level] || 'text-warning';
+    }
+
+    function getBorderColor(level) {
+      const colors = { safe: 'border-safe/30', low: 'border-safe/30', medium: 'border-warning/30', high: 'border-danger/30', critical: 'border-danger/50', liquidated: 'border-danger/50' };
+      return colors[level] || 'border-warning/30';
+    }
+
+    function formatNumber(num, decimals = 2) {
+      return num != null ? Number(num).toFixed(decimals) : '--';
+    }
+
+    function formatUsd(num) {
+      return num != null ? '$' + Number(num).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '--';
+    }
+
+    function addLog(message, type = 'info') {
+      const colors = { info: 'text-text-secondary', success: 'text-brand', warning: 'text-warning', error: 'text-danger', protection: 'text-purple-400' };
+      const icons = {
+        info: 'solar:info-circle-linear',
+        success: 'solar:check-circle-linear',
+        warning: 'solar:danger-triangle-linear',
+        error: 'solar:close-circle-linear',
+        protection: 'solar:shield-check-linear'
+      };
+
+      if (activityLog.querySelector('.text-center')) {
+        activityLog.innerHTML = '';
+      }
+
+      const entry = document.createElement('div');
+      entry.className = `log-entry flex items-start gap-2 p-2 rounded bg-white/5 text-xs mb-2 ${colors[type]}`;
+      entry.innerHTML = `
+        <iconify-icon icon="${icons[type]}" class="flex-shrink-0 mt-0.5"></iconify-icon>
+        <div class="flex-1">
+          <span class="font-mono text-[9px] text-text-tertiary">${new Date().toLocaleTimeString()}</span>
+          <p class="text-text-primary font-mono text-[10px]">${message}</p>
+        </div>
+      `;
+
+      activityLog.insertBefore(entry, activityLog.firstChild);
+      while (activityLog.children.length > 30) activityLog.removeChild(activityLog.lastChild);
+    }
+
+    // ─── API ─────────────────────────────────────────────────────────
+    async function checkConnection() {
+      try {
+        const res = await fetch(`${API_BASE}/health`);
+        const data = await res.json();
+        if (data.status === 'ok') {
+          statusDot.className = 'w-2 h-2 rounded-full bg-brand animate-pulse';
+          connectionStatus.textContent = 'CONNECTED';
+          connectionStatus.className = 'font-mono text-[10px] text-brand';
+          addLog('Connected to Varuna API', 'success');
+          return true;
+        }
+      } catch (e) {
+        statusDot.className = 'w-2 h-2 rounded-full bg-danger';
+        connectionStatus.textContent = 'OFFLINE';
+        connectionStatus.className = 'font-mono text-[10px] text-danger';
+        addLog('API offline. Run: npm start', 'error');
+        return false;
+      }
+      return false;
+    }
+
+    async function analyzeWallet(wallet) {
+      addLog(`Analyzing: ${wallet.slice(0, 8)}...`, 'info');
+
+      try {
+        const res = await fetch(`${API_BASE}/api/risk/${wallet}`, {
+          headers: DEMO_HEADERS
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          addLog(`Error: ${data.error}`, 'error');
+          return;
+        }
+
+        updateRiskOverview(data);
+        updatePositions(data.positions);
+        addLog(`Risk: ${data.overallRiskLevel.toUpperCase()}`, data.overallRiskLevel === 'safe' ? 'success' : 'warning');
+
+        if (['high', 'critical'].includes(data.overallRiskLevel)) {
+          fetchProtectionOptions(wallet, data.positions[0]?.protocol || 'kamino');
+        }
+      } catch (e) {
+        addLog(`Error: ${e.message}`, 'error');
+      }
+    }
+
+    async function fetchProtectionOptions(wallet, protocol) {
+      try {
+        const res = await fetch(`${API_BASE}/api/protect/${wallet}/${protocol}`, {
+          headers: DEMO_HEADERS
+        });
+        const data = await res.json();
+
+        if (data.options?.length > 0) {
+          protectionSection.style.display = 'block';
+          updateProtectionOptions(data.options);
+          addLog(`${data.options.length} protection options`, 'protection');
+        }
+      } catch (e) {}
+    }
+
+    // ─── UI Updates ──────────────────────────────────────────────────
+    function updateRiskOverview(data) {
+      document.getElementById('overall-score').textContent = formatNumber(data.overallRiskScore, 0);
+      document.getElementById('overall-score').className = `font-mono text-2xl ${getRiskColor(data.overallRiskLevel)} mb-1`;
+
+      document.getElementById('overall-level').textContent = data.overallRiskLevel.toUpperCase();
+      document.getElementById('overall-level').className = `font-mono text-2xl ${getRiskColor(data.overallRiskLevel)} mb-1`;
+
+      document.getElementById('position-count').textContent = data.positions.length;
+      document.getElementById('position-count').className = 'font-mono text-2xl text-brand mb-1';
+
+      const lowestHF = data.positions.reduce((min, p) => Math.min(min, p.healthFactor), Infinity);
+      document.getElementById('lowest-hf').textContent = lowestHF === Infinity ? '--' : formatNumber(lowestHF);
+      document.getElementById('lowest-hf').className = `font-mono text-2xl ${lowestHF < 1.2 ? 'text-danger' : lowestHF < 1.5 ? 'text-warning' : 'text-brand'} mb-1`;
+
+      lastUpdated.textContent = `UPDATED: ${new Date().toLocaleTimeString()}`;
+    }
+
+    function updatePositions(positions) {
+      if (!positions?.length) {
+        positionsContainer.innerHTML = `
+          <div class="text-center py-12">
+            <iconify-icon icon="solar:inbox-linear" width="40" class="text-text-tertiary mb-4"></iconify-icon>
+            <p class="font-mono text-xs text-text-secondary">No positions found</p>
+          </div>
+        `;
+        return;
+      }
+
+      positionsContainer.innerHTML = positions.map(pos => `
+        <div class="p-4 rounded-lg border ${getBorderColor(pos.riskLevel)} bg-black/20 mb-3">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-white/5 border border-line-subtle flex items-center justify-center font-mono text-xs uppercase text-text-secondary">
+                ${pos.protocol.slice(0, 1)}
+              </div>
+              <div>
+                <div class="font-mono text-sm text-white uppercase">${pos.protocol}</div>
+                <div class="font-mono text-[10px] text-text-secondary">HF: <span class="${getRiskColor(pos.riskLevel)}">${formatNumber(pos.healthFactor)}</span></div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-mono text-[10px] ${getRiskColor(pos.riskLevel)} uppercase">${pos.riskLevel}</div>
+              <div class="font-mono text-[9px] text-text-tertiary">Score: ${formatNumber(pos.riskScore, 0)}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="font-mono text-[9px] text-text-tertiary uppercase">Collateral</div>
+              <div class="font-mono text-xs text-white">${formatUsd(pos.collateralUsd)}</div>
+            </div>
+            <div>
+              <div class="font-mono text-[9px] text-text-tertiary uppercase">Debt</div>
+              <div class="font-mono text-xs text-white">${formatUsd(pos.debtUsd)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateProtectionOptions(options) {
+      protectionOptions.innerHTML = options.map((opt, i) => `
+        <div class="p-4 rounded-lg border ${i === 0 ? 'border-brand/50 bg-brand/5' : 'border-line-subtle bg-black/20'} cursor-pointer hover:border-brand/70 transition-colors">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-full ${i === 0 ? 'bg-brand text-black' : 'bg-white/10 text-text-secondary'} flex items-center justify-center font-mono text-[10px] font-bold">${i + 1}</span>
+              <span class="font-mono text-xs text-white uppercase">${opt.action.replace('_', ' ')}</span>
+              ${i === 0 ? '<span class="font-mono text-[9px] text-black bg-brand px-2 py-0.5 rounded">RECOMMENDED</span>' : ''}
+            </div>
+            <span class="font-mono text-xs text-text-secondary">${formatUsd(opt.amountUsd)}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-2 font-mono text-[9px]">
+            <div><span class="text-text-tertiary">Target:</span> <span class="text-brand">${formatNumber(opt.targetHF)}</span></div>
+            <div><span class="text-text-tertiary">Yield:</span> <span class="${opt.yieldImpact?.change < 0 ? 'text-danger' : 'text-brand'}">${opt.yieldImpact ? (opt.yieldImpact.change > 0 ? '+' : '') + formatNumber(opt.yieldImpact.change) + '%' : '--'}</span></div>
+            <div><span class="text-text-tertiary">Cost:</span> <span class="text-white">${formatUsd(opt.totalCostUsd)}</span></div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // ─── Demo Scenario ───────────────────────────────────────────────
+    function startDemo() {
+      if (demoInterval) { stopDemo(); return; }
+
+      demoBtn.innerHTML = '<iconify-icon icon="solar:stop-bold" class="animate-pulse"></iconify-icon> STOP';
+      addLog('Starting demo: Health factor dropping...', 'info');
+
+      demoHealthFactor = 1.8;
+      updateDemoState(demoHealthFactor);
+
+      demoInterval = setInterval(() => {
+        demoHealthFactor -= 0.1;
+
+        if (demoHealthFactor <= 1.1) {
+          addLog('CRITICAL: HF at 1.1 - Auto-protection triggered!', 'error');
+          addLog('Evaluating protection options...', 'protection');
+
+          setTimeout(() => {
+            addLog('Selected: Repay $150 USDC (lowest yield impact)', 'protection');
+            setTimeout(() => {
+              addLog('Protection executed! HF restored to 1.45', 'success');
+              demoHealthFactor = 1.45;
+              updateDemoState(demoHealthFactor);
+              protectionSection.style.display = 'none';
+            }, 1500);
+          }, 1000);
+
+          clearInterval(demoInterval);
+          demoInterval = null;
+          demoBtn.innerHTML = '<iconify-icon icon="solar:play-bold"></iconify-icon> Run Demo';
+          return;
+        }
+
+        updateDemoState(demoHealthFactor);
+        if (demoHealthFactor <= 1.3) {
+          addLog(`Warning: HF dropping to ${formatNumber(demoHealthFactor)}`, 'warning');
+        } else {
+          addLog(`HF: ${formatNumber(demoHealthFactor)}`, 'info');
+        }
+      }, 2000);
+    }
+
+    function stopDemo() {
+      if (demoInterval) {
+        clearInterval(demoInterval);
+        demoInterval = null;
+      }
+      demoBtn.innerHTML = '<iconify-icon icon="solar:play-bold"></iconify-icon> Run Demo';
+      addLog('Demo stopped', 'info');
+    }
+
+    function updateDemoState(hf) {
+      const level = hf <= 1.1 ? 'critical' : hf <= 1.2 ? 'high' : hf <= 1.5 ? 'medium' : 'safe';
+      const score = Math.max(0, Math.min(100, 100 - (hf - 1) * 100));
+
+      // Overview
+      document.getElementById('overall-score').textContent = formatNumber(score, 0);
+      document.getElementById('overall-score').className = `font-mono text-2xl ${getRiskColor(level)} mb-1`;
+
+      document.getElementById('overall-level').textContent = level.toUpperCase();
+      document.getElementById('overall-level').className = `font-mono text-2xl ${getRiskColor(level)} mb-1`;
+
+      document.getElementById('position-count').textContent = '1';
+      document.getElementById('position-count').className = 'font-mono text-2xl text-brand mb-1';
+
+      document.getElementById('lowest-hf').textContent = formatNumber(hf);
+      document.getElementById('lowest-hf').className = `font-mono text-2xl ${getRiskColor(level)} mb-1`;
+
+      lastUpdated.textContent = `UPDATED: ${new Date().toLocaleTimeString()}`;
+
+      // Position
+      positionsContainer.innerHTML = `
+        <div class="p-4 rounded-lg border ${getBorderColor(level)} bg-black/20">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center font-mono text-xs text-orange-400">K</div>
+              <div>
+                <div class="font-mono text-sm text-white">KAMINO</div>
+                <div class="font-mono text-[10px] text-text-secondary">HF: <span class="${getRiskColor(level)}">${formatNumber(hf)}</span></div>
+              </div>
+            </div>
+            <div class="text-right">
+              <div class="font-mono text-[10px] ${getRiskColor(level)} uppercase">${level}</div>
+              <div class="font-mono text-[9px] text-text-tertiary">Score: ${formatNumber(score, 0)}</div>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <div class="font-mono text-[9px] text-text-tertiary uppercase">Collateral (SOL)</div>
+              <div class="font-mono text-xs text-white">$10,000</div>
+            </div>
+            <div>
+              <div class="font-mono text-[9px] text-text-tertiary uppercase">Debt (USDC)</div>
+              <div class="font-mono text-xs text-white">$5,500</div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Protection
+      if (['high', 'critical'].includes(level)) {
+        protectionSection.style.display = 'block';
+        protectionOptions.innerHTML = `
+          <div class="p-4 rounded-lg border border-brand/50 bg-brand/5 cursor-pointer">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-brand text-black flex items-center justify-center font-mono text-[10px] font-bold">1</span>
+                <span class="font-mono text-xs text-white uppercase">Repay Debt</span>
+                <span class="font-mono text-[9px] text-black bg-brand px-2 py-0.5 rounded">RECOMMENDED</span>
+              </div>
+              <span class="font-mono text-xs text-text-secondary">$150</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 font-mono text-[9px]">
+              <div><span class="text-text-tertiary">Target:</span> <span class="text-brand">1.45</span></div>
+              <div><span class="text-text-tertiary">Yield:</span> <span class="text-warning">-1.3%</span></div>
+              <div><span class="text-text-tertiary">Cost:</span> <span class="text-white">$162</span></div>
+            </div>
+          </div>
+          <div class="p-4 rounded-lg border border-line-subtle bg-black/20 cursor-pointer hover:border-brand/30 transition-colors">
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-full bg-white/10 text-text-secondary flex items-center justify-center font-mono text-[10px] font-bold">2</span>
+                <span class="font-mono text-xs text-white uppercase">Add Collateral</span>
+              </div>
+              <span class="font-mono text-xs text-text-secondary">$200</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 font-mono text-[9px]">
+              <div><span class="text-text-tertiary">Target:</span> <span class="text-brand">1.50</span></div>
+              <div><span class="text-text-tertiary">Yield:</span> <span class="text-brand">0%</span></div>
+              <div><span class="text-text-tertiary">Cost:</span> <span class="text-white">$200</span></div>
+            </div>
+          </div>
+        `;
+      } else {
+        protectionSection.style.display = 'none';
+      }
+
+      // Yield
+      yieldRecommendations.innerHTML = `
+        <div class="p-3 rounded-lg border border-brand/20 bg-brand/5">
+          <div class="flex items-center gap-2 mb-1">
+            <iconify-icon icon="solar:graph-up-linear" class="text-brand"></iconify-icon>
+            <span class="font-mono text-xs text-brand font-bold">+70% Yield</span>
+          </div>
+          <p class="font-mono text-[9px] text-text-secondary">Swap SOL to mSOL for 8.5% APY</p>
+        </div>
+      `;
+    }
+
+    // ─── Events ──────────────────────────────────────────────────────
+    analyzeBtn.addEventListener('click', () => {
+      const wallet = walletInput.value.trim();
+      if (wallet) analyzeWallet(wallet);
+      else addLog('Enter a wallet address', 'warning');
+    });
+
+    walletInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') analyzeBtn.click();
+    });
+
+    demoBtn.addEventListener('click', startDemo);
+    clearLogBtn.addEventListener('click', () => {
+      activityLog.innerHTML = '<div class="text-center py-6"><p class="font-mono text-[10px] text-text-tertiary">Waiting for activity...</p></div>';
+    });
+
+    // ─── Init ────────────────────────────────────────────────────────
+    checkConnection();
+  </script>
+</body>
+</html>
